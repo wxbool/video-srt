@@ -81,7 +81,7 @@ func AliyunAudioResultWordHandle(result [] byte , callback func (vresult *Aliyun
 
 	var symbol = []string{"？","。","，","！","；","?",".",",","!"}
 	//数据集处理
-	for _,value := range audioResult {
+	for _ , value := range audioResult {
 		for _ , data := range value {
 			data.Blocks = GetTextBlock(data.Text)
 			data.Text = ReplaceStrs(data.Text , symbol , "")
@@ -111,28 +111,28 @@ func AliyunAudioResultWordHandle(result [] byte , callback func (vresult *Aliyun
 				if word.ChannelId != channel {
 					continue
 				}
-				for _ , w := range p {
+				for windex , w := range p {
 					if word.BeginTime >= w.BeginTime && word.EndTime <= w.EndTime {
+						flag := false
 						for t , B := range w.Blocks{
-							if blockRune >= B && B != -1 {
-								//fmt.Println(blockRune , B , lastBlock , (B - lastBlock))
+							if (blockRune >= B) && B != -1 {
+								flag = true
+
+								//fmt.Println(  block )
+								//fmt.Println(  w.Text )
+								//fmt.Println(  w.Blocks )
+								//fmt.Println( blockRune , B , lastBlock , (B - lastBlock) )
 
 								var thisText = ""
 								//容错机制
 								if t == (len(w.Blocks) - 1) {
-									thisText = SubString(block , lastBlock , blockRune)
+									thisText = SubString(w.Text , lastBlock , 10000)
 								} else {
-									thisText = SubString(block , lastBlock , (B - lastBlock))
+									thisText = SubString(w.Text , lastBlock , (B - lastBlock))
 								}
 
 								lastBlock = B
 								w.Blocks[t] = -1
-
-								//fmt.Println("thisText" , thisText)
-								//fmt.Println("BeginTime" , beginTime)
-								//fmt.Println("EndTime" , word.EndTime)
-								//fmt.Println("w.Blocks" , w.Blocks)
-								//fmt.Println("\n\n")
 
 								vresult := &AliyunAudioRecognitionResult{
 									Text:thisText,
@@ -152,6 +152,40 @@ func AliyunAudioResultWordHandle(result [] byte , callback func (vresult *Aliyun
 
 						if FindSliceIntCount(w.Blocks , -1) == len(w.Blocks) {
 							//全部截取完成
+							block = ""
+							lastBlock = 0
+						}
+
+						//容错机制
+						if FindSliceIntCount(w.Blocks , -1) == (len(w.Blocks)-1) && flag == false {
+							var thisText = SubString(w.Text , lastBlock , 10000)
+
+							w.Blocks[len(w.Blocks) - 1] = -1
+							//vresult
+							vresult := &AliyunAudioRecognitionResult{
+								Text:thisText,
+								ChannelId:channel,
+								BeginTime:beginTime,
+								EndTime:w.EndTime,
+								SilenceDuration:w.SilenceDuration,
+								SpeechRate:w.SpeechRate,
+								EmotionValue:w.EmotionValue,
+							}
+						
+							//fmt.Println(  thisText )
+							//fmt.Println(  block )
+							//fmt.Println(  word.Word , beginTime, w.EndTime , flag  , word.EndTime  )
+
+							callback(vresult) //回调传参
+
+							//覆盖下一段落的时间戳
+							if windex < (len(p)-1) {
+								beginTime = p[windex+1].BeginTime
+							} else {
+								beginTime = w.EndTime
+							}
+
+							//清除参数
 							block = ""
 							lastBlock = 0
 						}
@@ -214,7 +248,7 @@ func IndexRunes(strs string , olds []rune) int  {
 }
 
 func GetTextBlock(strs string) ([]int) {
-	var symbol_zhcn = []rune{'？','。','，','！','；'}
+	var symbol_zhcn = []rune{'？','。','，','！','；','?','.',',','!'}
 	//var symbol_en = []rune{'?','.',',','!'}
 	strsRune := []rune(strs)
 

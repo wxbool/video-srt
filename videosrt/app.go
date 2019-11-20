@@ -39,9 +39,7 @@ func ReadConfig (cfg string) *VideoSrt {
 		panic(e);
 	} else {
 		appconfig := &VideoSrt{}
-		//取消
-		//appconfig.Ffmpeg.Os = file.GetMust("ffmpeg.os" , "")
-
+				
 		//AliyunOss
 		appconfig.AliyunOss.Endpoint = file.GetMust("aliyunOss.endpoint" , "")
 		appconfig.AliyunOss.AccessKeyId = file.GetMust("aliyunOss.accessKeyId" , "")
