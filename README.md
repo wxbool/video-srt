@@ -4,6 +4,7 @@
 
 本项目使用了阿里云的[OSS对象存储](https://www.aliyun.com/product/oss?spm=5176.12825654.eofdhaal5.13.e9392c4aGfj5vj&aly_as=K11FcpO8)、[录音文件识别](https://ai.aliyun.com/nls/filetrans?spm=5176.12061031.1228726.1.47fe3cb43I34mn)的相关业务接口。
 
+Windows-GUI版本：[https://github.com/wxbool/video-srt-windows](https://github.com/wxbool/video-srt-windows)
 
 ## 下载安装
 ```shell
