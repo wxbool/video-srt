@@ -1,16 +1,17 @@
-package videosrt
+	package videosrt
 
-import (
-	"bytes"
-	"config/ini"
-	"github.com.wxbool/video-srt/videosrt/aliyun/cloud"
-	"github.com.wxbool/video-srt/videosrt/aliyun/oss"
-	"github.com.wxbool/video-srt/videosrt/ffmpeg"
-	"github.com/buger/jsonparser"
-	"os"
-	"path"
-	"strconv"
-)
+	import (
+		"bytes"
+		"fmt"
+		"github.com/buger/jsonparser"
+		"os"
+		"path"
+		"strconv"
+		"videosrt/videosrt/aliyun/cloud"
+		"videosrt/videosrt/aliyun/oss"
+		"videosrt/videosrt/config/ini"
+		"videosrt/videosrt/ffmpeg"
+	)
 
 
 //主应用
@@ -80,7 +81,7 @@ func (app *VideoSrt) Run(video string) {
 	tmpAudioDir := app.AppDir + "/" + app.TempDir
 	if !DirExists(tmpAudioDir) {
 		//创建目录
-		if err := CreateDir(tmpAudioDir , false); err != nil {
+		if err := CreateDir(tmpAudioDir , true); err != nil {
 			panic(err)
 		}
 	}
@@ -98,6 +99,7 @@ func (app *VideoSrt) Run(video string) {
 	filelink := UploadAudioToClound(app.AliyunOss , tmpAudio)
 	//获取完整链接
 	filelink = app.AliyunOss.GetObjectFileUrl(filelink)
+	fmt.Println("filelink:" , filelink)
 
 	Log("上传文件成功 , 识别中 ...")
 
@@ -105,6 +107,11 @@ func (app *VideoSrt) Run(video string) {
 	AudioResult := AliyunAudioRecognition(app.AliyunClound, filelink , app.IntelligentBlock)
 
 	Log("文件识别成功 , 字幕处理中 ...")
+
+	//校验字幕段落是否为空
+	if CheckEmptyResult(AudioResult) {
+		panic("检测到识别结果为空，生成字幕失败（检查：媒体文件人声是否清晰？语音引擎与媒体语言是否匹配？）")
+	}
 
 	//输出字幕文件
 	AliyunAudioResultMakeSubtitleFile(video , AudioResult)
@@ -156,8 +163,10 @@ func AliyunAudioRecognition(engine cloud.AliyunClound , filelink string , intell
 	AudioResult = make(map[int64][] *cloud.AliyunAudioRecognitionResult)
 
 	//遍历获取识别结果
-	engine.GetAudioFileResult(taskid , client , func(result []byte) {
-		//mylog.WriteLog( string( result ) )
+	err := engine.GetAudioFileResult(taskid , client , func(text string) {
+		Log(text)
+	} , func(result []byte) {
+		//mylog.WriteLog( string(result) )
 
 		//结果处理
 		statusText, _ := jsonparser.GetString(result, "StatusText") //结果状态
@@ -215,7 +224,9 @@ func AliyunAudioRecognition(engine cloud.AliyunClound , filelink string , intell
 			}
 		}
 	})
-
+	if err != nil {
+		panic("查询文件识别结果失败：" + err.Error())
+	}
 	return
 }
 
@@ -225,26 +236,24 @@ func AliyunAudioResultMakeSubtitleFile(video string , AudioResult map[int64][] *
 	subfileDir := path.Dir(video)
 	subfile := GetFileBaseName(video)
 
-	for channel,result := range AudioResult {
-		thisfile := subfileDir + "/" + subfile + "_channel_" +  strconv.FormatInt(channel , 10) + ".srt"
+	for _ , result := range AudioResult {
+		thisfile := subfileDir + "/" + subfile + ".srt"
 		//输出字幕文件
-		println(thisfile)
+		println("输出文件：" , thisfile)
 
 		file, e := os.Create(thisfile)
 		if e != nil {
 			panic(e)
 		}
 
-		defer file.Close() //defer
-
 		index := 0
 		for _ , data := range result {
 			linestr := MakeSubtitleText(index , data.BeginTime , data.EndTime , data.Text)
-
 			file.WriteString(linestr)
-
 			index++
 		}
+		file.Close() //defer
+		break
 	}
 }
 
@@ -262,4 +271,16 @@ func MakeSubtitleText(index int , startTime int64 , endTime int64 , text string)
 	content.WriteString("\n")
 	content.WriteString("\n")
 	return content.String()
+}
+
+//检查是否为空输出
+func CheckEmptyResult(AudioResult map[int64][] *cloud.AliyunAudioRecognitionResult) bool  {
+	empty := true
+	for _,v := range AudioResult {
+		for range v {
+			empty = false
+			break
+		}
+	}
+	return empty
 }

@@ -1,0 +1,7 @@
+go.sum
+*.wav
+*.mp3
+*.exe
+*.srt
+log.txt
+.idea

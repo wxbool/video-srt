@@ -3,11 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com.wxbool/video-srt/videosrt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
+	"videosrt/videosrt"
 )
 
 //定义配置文件
@@ -18,10 +17,8 @@ func main() {
 	//致命错误捕获
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("")
-			log.Printf("错误:\n%v", err)
-
-			time.Sleep(time.Second * 5)
+			fmt.Println("执行错误 : ", err)
+			os.Exit(500)
 		}
 	}()
 

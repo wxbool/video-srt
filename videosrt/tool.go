@@ -1,6 +1,7 @@
 package videosrt
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -45,9 +46,9 @@ func DirExists(path string) bool {
 func CreateDir(path string , all bool) error {
 	var err error
 	if all {
-		err = os.Mkdir(path, os.ModePerm)
-	} else {
 		err = os.MkdirAll(path, os.ModePerm)
+	} else {
+		err = os.Mkdir(path, os.ModePerm)
 	}
 	if err != nil {
 		return err
@@ -121,5 +122,14 @@ func RepeatStr(str string , s string , length int , before bool) string {
 		return  strings.Repeat(s , (length - ln)) + str
 	} else {
 		return  str + strings.Repeat(s , (length - ln))
+	}
+}
+
+
+//打印对象转JSON数据
+func DumpObjectToJson(data interface{} , title string) {
+	if data != nil {
+		jsonData , _ := json.Marshal(data)
+		fmt.Println(title , string(jsonData))
 	}
 }
